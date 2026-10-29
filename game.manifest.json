@@ -1,14 +1,14 @@
 {
-  "id": "snake",
-  "order": 1,
+  "id": "snake-endless",
+  "order": 2,
   "title": {
-    "zh": "花尾蛇：色彩小径",
-    "en": "Bloomtail: Color Trail"
+    "zh": "花尾蛇：无尽",
+    "en": "Bloomtail: Endless"
   },
   "description": {
-    "zh": "蛇走过的地方会留下颜色。吃水果换色，点亮花园里的花苞，收集金种子，沿着小径让整座花园重新开花。",
-    "en": "Every step leaves a trail of color. Eat fruit to change your hue, bloom the garden's buds, collect golden seeds and bring the old orchard back to life."
+    "zh": "在花园里一直吃下去。连吃水果、收集超级果实，冲击你的最高分。",
+    "en": "Keep eating through the garden. Chain fruit, chase super fruit and beat your best score."
   },
   "themeColor": "#ffb020",
-  "tags": ["arcade", "puzzle", "casual"]
+  "tags": ["arcade", "casual"]
 }

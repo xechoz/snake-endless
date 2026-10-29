@@ -1,6 +1,6 @@
 {
-  "name": "@mg/snake",
-  "version": "4.0.0",
+  "name": "@mg/snake-endless",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "workspaces": [

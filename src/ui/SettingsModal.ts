@@ -2,7 +2,6 @@ import { Button, getServices, readViewport, type Theme, textStyle } from '@mg/co
 import Phaser from 'phaser'
 import { setMusicVolume, syncMusic } from '../audio/music'
 import { playSfx } from '../audio/sfx'
-import { DIFFICULTIES, type Difficulty } from '../logic/difficulty'
 import type { SnakeSettings } from '../save'
 
 export interface SettingsModalOptions {
@@ -13,16 +12,15 @@ export interface SettingsModalOptions {
 }
 
 const CARD_WIDTH = 640
-const CARD_HEIGHT = 520
+const CARD_HEIGHT = 380
 const ROW_WIDTH = CARD_WIDTH - 88
 const TITLE_SIZE = 34
 const LABEL_SIZE = 27
 const VALUE_SIZE = 25
-const HINT_SIZE = 23
 
 /**
  * Player preferences that belong to the game rather than the host portal:
- * music and effect levels, the campaign difficulty, and the master mute. The
+ * music and effect levels, and the master mute. The
  * modal is deliberately a single column so it fits landscape and portrait
  * without a second scroll state.
  */
@@ -32,11 +30,7 @@ export class SettingsModal extends Phaser.GameObjects.Container {
   private readonly theme: Theme
   private readonly options: SettingsModalOptions
   private readonly card: Phaser.GameObjects.Container
-  private readonly cardWidth: number
-  private readonly cardHeight: number
   private soundButton!: Button
-  private difficultyButtons?: Phaser.GameObjects.Container
-  private hint!: Phaser.GameObjects.Text
 
   constructor(scene: Phaser.Scene, options: SettingsModalOptions) {
     super(scene, 0, 0)
@@ -48,8 +42,6 @@ export class SettingsModal extends Phaser.GameObjects.Container {
     const viewport = readViewport(scene)
     const width = Math.min(viewport.width - 40, CARD_WIDTH)
     const height = Math.min(viewport.height - 40, CARD_HEIGHT)
-    this.cardWidth = width
-    this.cardHeight = height
 
     const backdrop = scene.add
       .rectangle(0, 0, viewport.width, viewport.height, options.theme.overlay, 0.72)
@@ -115,27 +107,6 @@ export class SettingsModal extends Phaser.GameObjects.Container {
         playSfx('click')
       },
     })
-
-    const difficultyLabel = scene.add
-      .text(
-        -width / 2 + 44,
-        top + 340,
-        getServices().i18n.t('settings.difficulty'),
-        textStyle(options.theme, LABEL_SIZE, options.theme.text, true),
-      )
-      .setOrigin(0, 0.5)
-    this.card.add(difficultyLabel)
-
-    this.hint = scene.add
-      .text(0, top + 458, '', {
-        ...textStyle(options.theme, HINT_SIZE, options.theme.textMuted),
-        align: 'center',
-        wordWrap: { width: width - 96 },
-      })
-      .setOrigin(0.5)
-    this.card.add(this.hint)
-
-    this.renderDifficulty(top + 398, width)
 
     const onEsc = (): void => this.close()
     scene.input.keyboard?.on('keydown-ESC', onEsc)
@@ -203,44 +174,6 @@ export class SettingsModal extends Phaser.GameObjects.Container {
     })
     row.setPosition(0, y)
     this.card.add(row)
-  }
-
-  private renderDifficulty(y: number, cardWidth: number): void {
-    this.difficultyButtons?.destroy(true)
-    const group = this.scene.add.container(0, y)
-    this.card.add(group)
-    this.difficultyButtons = group
-
-    const gap = 12
-    const buttonWidth = (cardWidth - 88 - gap * (DIFFICULTIES.length - 1)) / DIFFICULTIES.length
-
-    DIFFICULTIES.forEach((difficulty, index) => {
-      const selected = difficulty === this.settings.difficulty
-      const button = new Button(
-        this.scene,
-        -cardWidth / 2 + 44 + buttonWidth / 2 + index * (buttonWidth + gap),
-        0,
-        getServices().i18n.t(`settings.${difficulty}`),
-        this.theme,
-        {
-          width: buttonWidth,
-          height: 56,
-          variant: selected ? 'primary' : 'soft',
-          fontSize: 26,
-          onClick: () => this.selectDifficulty(difficulty),
-        },
-      )
-      group.add(button)
-    })
-
-    this.hint.setText(getServices().i18n.t(`settings.${this.settings.difficulty}Hint`))
-  }
-
-  private selectDifficulty(difficulty: Difficulty): void {
-    if (difficulty === this.settings.difficulty) return
-    playSfx('click')
-    this.persist({ ...this.settings, difficulty })
-    this.renderDifficulty(-this.cardHeight / 2 + 398, this.cardWidth)
   }
 
   private persist(next: SnakeSettings): void {

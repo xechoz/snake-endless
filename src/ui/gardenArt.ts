@@ -1,7 +1,6 @@
 import type { Theme } from '@mg/core'
 import type Phaser from 'phaser'
 import { snakeColors } from '../colors'
-import type { LevelDef } from '../logic/levels'
 import type { Cell, FruitKind } from '../logic/types'
 import type { BoardMetrics } from './gameArt'
 
@@ -90,54 +89,6 @@ export function drawGardenBoard(
   }
 }
 
-export function drawLevelSeeds(
-  graphics: Phaser.GameObjects.Graphics,
-  board: BoardMetrics,
-  level: LevelDef,
-  bloomed: readonly boolean[],
-  bloomColors: readonly (FruitKind | null)[],
-  golden: boolean,
-  time: number,
-  theme: Theme,
-): void {
-  graphics.clear()
-  const cell = board.cell
-
-  level.seeds.forEach((seed, index) => {
-    const cx = board.x + (seed.cell.x + 0.5) * cell
-    const cy = board.y + (seed.cell.y + 0.5) * cell
-    const bloomColor = bloomColors[index] ?? (seed.color === 'any' ? null : seed.color)
-    if (bloomed[index]) {
-      const color = bloomColor ? snakeColors.art.fruits[bloomColor].body : theme.accentWarm
-      drawFlower(graphics, cx, cy, cell * 0.34, color, time + index * 400, theme)
-    } else {
-      const color =
-        seed.color === 'any'
-          ? snakeColors.art.garden.petal
-          : snakeColors.art.fruits[seed.color].body
-      drawBud(graphics, cx, cy, cell * 0.24, color, time + index * 300, theme)
-    }
-  })
-
-  if (level.golden && !golden) {
-    const cx = board.x + (level.golden.x + 0.5) * cell
-    const cy = board.y + (level.golden.y + 0.5) * cell
-    const pulse = 1 + Math.sin(time * 0.005) * 0.08
-    graphics.fillStyle(snakeColors.art.garden.gold, 0.16)
-    graphics.fillCircle(cx, cy, cell * 0.42 * pulse)
-    drawStar(
-      graphics,
-      cx,
-      cy,
-      cell * 0.28 * pulse,
-      cell * 0.12 * pulse,
-      snakeColors.art.garden.gold,
-      theme.ink,
-      2,
-    )
-  }
-}
-
 export function drawPaintTrail(
   graphics: Phaser.GameObjects.Graphics,
   board: BoardMetrics,
@@ -195,31 +146,6 @@ export function drawFlower(
   graphics.fillCircle(x - radius * 0.08, y - radius * 0.1, radius * 0.055)
 }
 
-export function drawBud(
-  graphics: Phaser.GameObjects.Graphics,
-  x: number,
-  y: number,
-  radius: number,
-  color: number,
-  time: number,
-  theme: Theme,
-): void {
-  const pulse = 1 + Math.sin(time * 0.006) * 0.07
-  const r = radius * pulse
-  graphics.fillStyle(theme.ink, 0.8)
-  graphics.fillCircle(x, y + r * 0.1, r * 1.05)
-  graphics.fillStyle(color, 1)
-  graphics.fillCircle(x, y + r * 0.1, r * 0.9)
-  graphics.fillStyle(theme.highlight, 0.45)
-  graphics.fillCircle(x - r * 0.28, y - r * 0.22, r * 0.22)
-
-  // A tiny leaf and stem read as a bud instead of a fruit.
-  graphics.lineStyle(Math.max(1.5, r * 0.16), snakeColors.art.foliage.deep, 1)
-  graphics.lineBetween(x, y - r * 0.8, x, y - r * 1.35)
-  graphics.fillStyle(snakeColors.art.foliage.mid, 1)
-  graphics.fillEllipse(x + r * 0.45, y - r * 1.12, r * 0.8, r * 0.38)
-}
-
 function drawHedge(
   graphics: Phaser.GameObjects.Graphics,
   x: number,
@@ -242,43 +168,4 @@ function drawHedge(
     graphics.fillStyle(garden.hedge, 1)
     graphics.fillCircle(bx + size * 0.06, by + size * 0.06, size * 0.07)
   }
-}
-
-export function drawStar(
-  graphics: Phaser.GameObjects.Graphics,
-  x: number,
-  y: number,
-  outer: number,
-  inner: number,
-  color: number,
-  outline: number,
-  lineWidth: number,
-): void {
-  const points = 5
-  const path: number[] = []
-  for (let index = 0; index < points * 2; index += 1) {
-    const radius = index % 2 === 0 ? outer : inner
-    const angle = (TAU * index) / (points * 2) - Math.PI / 2
-    path.push(x + Math.cos(angle) * radius, y + Math.sin(angle) * radius)
-  }
-
-  graphics.fillStyle(outline, 1)
-  graphics.beginPath()
-  graphics.moveTo(x, y - outer - lineWidth)
-  for (let index = 0; index < points * 2; index += 1) {
-    const radius = (index % 2 === 0 ? outer : inner) + lineWidth
-    const angle = (TAU * index) / (points * 2) - Math.PI / 2
-    graphics.lineTo(x + Math.cos(angle) * radius, y + Math.sin(angle) * radius)
-  }
-  graphics.closePath()
-  graphics.fillPath()
-
-  graphics.fillStyle(color, 1)
-  graphics.beginPath()
-  graphics.moveTo(path[0] ?? x, path[1] ?? y)
-  for (let index = 2; index < path.length; index += 2) {
-    graphics.lineTo(path[index] ?? x, path[index + 1] ?? y)
-  }
-  graphics.closePath()
-  graphics.fillPath()
 }

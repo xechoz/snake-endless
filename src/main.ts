@@ -13,7 +13,7 @@ const music = new URL('./assets/audio/sweet-fun-loop.mp3', import.meta.url).href
 const handPointer = new URL('./assets/hand-pointer.svg', import.meta.url).href
 
 createGame({
-  id: 'snake',
+  id: 'snake-endless',
   design: { base: 720 },
   theme: snakeColors.theme,
   defaultLang: 'en',

@@ -18,8 +18,6 @@ import Phaser from 'phaser'
 import { startMusic } from '../audio/music'
 import { playSfx } from '../audio/sfx'
 import { snakeColors } from '../colors'
-import { levelById } from '../logic/levels'
-import { MAX_STARS, nextLevelId, totalStars } from '../logic/progress'
 import type { Direction } from '../logic/types'
 import { snakeSave } from '../save'
 import { resolveSkin, startingSegmentColors } from '../skins'
@@ -30,7 +28,6 @@ import { hasTouchInput } from '../ui/device'
 import { fruitDecoration } from '../ui/fruitDecoration'
 import { gearDecoration } from '../ui/gear'
 import { LanguageModal } from '../ui/LanguageModal'
-import { LevelMapModal } from '../ui/LevelMapModal'
 import {
   computeMenuLayout,
   MENU_PLAY_HEIGHT,
@@ -63,13 +60,12 @@ export class MenuScene extends Phaser.Scene {
   private playGlow!: Phaser.GameObjects.Graphics
   private playButton!: Button
   private playWidth = 0
-  private mapButton!: Button
+  private collectionButton!: Button
   private settingsButton!: Button
   private languageButton!: Button
   private collectionModal?: CollectionModal
   private languageModal?: LanguageModal
   private settingsModal?: SettingsModal
-  private levelMap?: LevelMapModal
   private ambience?: OrchardAmbience
   private demo!: MenuDemo
   private hint!: Phaser.GameObjects.Text
@@ -90,14 +86,8 @@ export class MenuScene extends Phaser.Scene {
   create(): void {
     const services = getServices()
     const theme = services.theme
-    const preview = services.params.get('level')
-    if (preview && services.debug && levelById(preview)) {
-      this.scene.start('Game', { mode: 'level', levelId: preview })
-      return
-    }
     startMusic(this)
     const save = snakeSave(services).read()
-    const stars = totalStars(save)
     const menuSkin = resolveSkin(createRng(randomSeed()), {
       unlocked: save.unlockedSkins,
       active: save.activeSkin,
@@ -119,30 +109,30 @@ export class MenuScene extends Phaser.Scene {
       .text(
         0,
         0,
-        services.i18n.t('menu.progress', { stars, total: MAX_STARS }),
+        services.i18n.t('menu.best', { score: save.best }),
         textStyle(theme, 26, cssColor(snakeColors.art.ui.onBg), true),
       )
       .setOrigin(0.5)
 
     this.playGlow = this.add.graphics()
     this.playWidth = initial.playWidth
-    this.playButton = new Button(this, 0, 0, services.i18n.t('menu.continue'), theme, {
+    this.playButton = new Button(this, 0, 0, services.i18n.t('menu.play'), theme, {
       width: initial.playWidth,
       height: MENU_PLAY_HEIGHT,
       fontSize: PLAY_FONT_SIZE,
       icon: 'play',
       decoration: fruitDecoration,
-      onClick: () => this.startNextLevel(),
+      onClick: () => this.startRun(),
     })
 
-    this.mapButton = new Button(this, 0, 0, '', theme, {
+    this.collectionButton = new Button(this, 0, 0, '', theme, {
       width: initial.settings.size,
       height: initial.settings.size,
       variant: 'soft',
       minHitSize: this.touch ? MENU_SETTINGS_HIT : undefined,
       fontSize: SETTINGS_ICON_SIZE,
-      icon: 'star',
-      onClick: () => this.openMap(),
+      icon: 'bag',
+      onClick: () => this.openCollection(),
     })
 
     this.settingsButton = new Button(this, 0, 0, '', theme, {
@@ -198,7 +188,6 @@ export class MenuScene extends Phaser.Scene {
     onLayoutChange(this, (next) => {
       this.languageModal?.close()
       this.collectionModal?.close()
-      this.levelMap?.close()
       this.settingsModal?.close()
       this.applyLayout(
         next,
@@ -207,10 +196,8 @@ export class MenuScene extends Phaser.Scene {
     })
     this.playEntrance()
 
-    if (services.debug && services.params.get('map') !== null) this.openMap()
-
-    this.input.keyboard?.on('keydown-ENTER', () => this.startNextLevel())
-    this.input.keyboard?.on('keydown-SPACE', () => this.startNextLevel())
+    this.input.keyboard?.on('keydown-ENTER', () => this.startRun())
+    this.input.keyboard?.on('keydown-SPACE', () => this.startRun())
     const takeoverKeys: readonly (readonly [string, Direction])[] = [
       ['UP', 'up'],
       ['W', 'up'],
@@ -229,28 +216,7 @@ export class MenuScene extends Phaser.Scene {
     }
   }
 
-  private startNextLevel(): void {
-    const save = snakeSave(getServices()).read()
-    const next = nextLevelId(save)
-    // `nextLevelId` falls back to 1-1 once every level has a star. That means
-    // the campaign is finished, so send the player to the map instead of
-    // silently restarting the first level.
-    if ((save.levels[next]?.stars ?? 0) > 0) {
-      this.openMap()
-      return
-    }
-    this.startLevel(next)
-  }
-
-  private startLevel(levelId: string): void {
-    this.startRun({ mode: 'level', levelId })
-  }
-
-  private startEndless(): void {
-    this.startRun({ mode: 'endless' })
-  }
-
-  private startRun(data: { mode: 'level'; levelId: string } | { mode: 'endless' }): void {
+  private startRun(): void {
     if (this.modalOpen()) return
     this.coach.cancel()
     this.steer.setEnabled(false)
@@ -258,44 +224,11 @@ export class MenuScene extends Phaser.Scene {
     maybeEnterFullscreen(this.scale)
     services.audio.unlock()
     playSfx('click')
-    this.scene.start('Game', data)
+    this.scene.start('Game')
   }
 
   private modalOpen(): boolean {
-    return Boolean(
-      this.languageModal || this.collectionModal || this.levelMap || this.settingsModal,
-    )
-  }
-
-  private openMap(): void {
-    if (this.modalOpen()) return
-    const services = getServices()
-    playSfx('click')
-    this.steer.setEnabled(false)
-    this.coach.pause()
-    this.levelMap = new LevelMapModal(this, {
-      theme: services.theme,
-      save: snakeSave(services).read(),
-      onSelect: (levelId) => {
-        this.levelMap = undefined
-        this.startLevel(levelId)
-      },
-      onEndless: () => {
-        this.levelMap = undefined
-        this.startEndless()
-      },
-      onCollection: () => {
-        this.levelMap = undefined
-        this.openCollection()
-      },
-      onClose: () => {
-        this.levelMap = undefined
-        if (this.languageModal || this.collectionModal) return
-        this.coach.resume()
-        this.syncDemoSteer(this.layout)
-        this.syncHint(this.layout)
-      },
-    })
+    return Boolean(this.languageModal || this.collectionModal || this.settingsModal)
   }
 
   private openLanguage(): void {
@@ -377,7 +310,7 @@ export class MenuScene extends Phaser.Scene {
 
     this.playButton.setPosition(layout.centerX, layout.playY)
     this.drawPlayGlow(layout)
-    this.mapButton.setPosition(layout.settings.collection.x, layout.settings.collection.y)
+    this.collectionButton.setPosition(layout.settings.collection.x, layout.settings.collection.y)
     this.settingsButton.setPosition(layout.settings.settings.x, layout.settings.settings.y)
     this.languageButton.setPosition(layout.settings.language.x, layout.settings.language.y)
 
@@ -582,7 +515,7 @@ export class MenuScene extends Phaser.Scene {
     this.bestLabel.setAlpha(0)
     this.playGlow.setAlpha(0).setScale(1)
     this.playButton.setAlpha(0).setScale(0.9)
-    this.mapButton.setAlpha(0)
+    this.collectionButton.setAlpha(0)
     this.settingsButton.setAlpha(0)
     this.languageButton.setAlpha(0)
     this.controlsIcon.setAlpha(0)
@@ -597,7 +530,7 @@ export class MenuScene extends Phaser.Scene {
       delay: 220,
     })
     this.tweens.add({
-      targets: [this.mapButton, this.settingsButton, this.languageButton],
+      targets: [this.collectionButton, this.settingsButton, this.languageButton],
       alpha: 1,
       duration: 260,
       delay: 60,

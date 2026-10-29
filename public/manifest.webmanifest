@@ -1,8 +1,8 @@
 {
   "id": "./",
-  "name": "Bloomtail: Color Trail",
+  "name": "Bloomtail: Endless",
   "short_name": "Bloomtail",
-  "description": "Paint a path through the garden, bloom every bud, and wake the colors of the old orchard.",
+  "description": "Eat fruit, paint the garden and chase your best score in a classic endless snake run.",
   "lang": "en",
   "start_url": "./",
   "scope": "./",
